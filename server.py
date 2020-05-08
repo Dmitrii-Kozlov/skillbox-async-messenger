@@ -35,7 +35,7 @@ class ClientProtocol(asyncio.Protocol):
     def send_message(self, message):
         format_string = f"<{self.login} > {message}"
         encoded = format_string.encode()
-        # добавляем сообщение в "список из 10 сообщений" и проверяем, чтобы список не разростался
+        # добавляем сообщение в "список из 10 сообщений" и проверяем, чтобы список не разрастался
         if len(self.server.chat) >= 10:
             self.server.chat.pop(0)
         self.server.chat.append(encoded)
