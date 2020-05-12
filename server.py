@@ -22,12 +22,16 @@ class ClientProtocol(asyncio.Protocol):
                 if login in (log.login for log in self.server.clients):
                     self.transport.write(f"Login <{login}> is occupied. Try another one.\n".encode())
                     self.transport.close()
+                    return
                 # если логин не занят присваиваем его и отправляем последние десять сообщений из чата
                 else:
                     self.login = login
                 self.transport.write(
                     f"Hello {self.login}!\n".encode()
                 )
+                for client in self.server.clients:
+                    if client.login != self.login and client.login != None:
+                        client.transport.write(f"<{self.login}> is connected!\n".encode())
                 self.send_history()
         else:
             self.send_message(decoded)
@@ -36,16 +40,16 @@ class ClientProtocol(asyncio.Protocol):
         format_string = f"<{self.login} > {message}"
         encoded = format_string.encode()
         # добавляем сообщение в "список из 10 сообщений" и проверяем, чтобы список не разрастался
-        if len(self.server.chat) >= 10:
-            self.server.chat.pop(0)
-        self.server.chat.append(encoded)
+        #if len(self.server.chat) >= 10:
+        #    self.server.chat.pop(0)
+        self.server.chat.append(encoded + b'\n')
 
         for client in self.server.clients:
-            if client.login != self.login:
+            if client.login != None:
                 client.transport.write(encoded)
 
     def send_history(self):
-        for old_chat in self.server.chat:
+        for old_chat in self.server.chat[-10:]:
             self.transport.write(old_chat)
 
     def connection_made(self, transport: transports.Transport):
@@ -54,6 +58,10 @@ class ClientProtocol(asyncio.Protocol):
         print("connection made")
 
     def connection_lost(self, exception):
+        if self.login != None:
+            for client in self.server.clients:
+                if client.login != self.login and client.login != None:
+                    client.transport.write(f"<{self.login}> is disconnected!\n".encode())
         self.server.clients.remove(self)
         print("connection lost")
 
